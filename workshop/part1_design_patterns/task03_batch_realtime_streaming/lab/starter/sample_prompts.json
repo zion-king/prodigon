@@ -1,0 +1,17 @@
+[
+  "Explain what a neural network is in one paragraph.",
+  "Write a Python function that reverses a linked list.",
+  "What are the three laws of thermodynamics?",
+  "Describe the difference between TCP and UDP.",
+  "Write a haiku about machine learning.",
+  "Explain the CAP theorem to a five-year-old.",
+  "What is gradient descent and why does it work?",
+  "List five best practices for writing REST APIs.",
+  "Explain the difference between concurrency and parallelism.",
+  "Write a SQL query to find the second-highest salary in a table.",
+  "What is the difference between a stack and a queue?",
+  "Explain how a transformer model processes a sentence.",
+  "What are the SOLID principles in software engineering?",
+  "Describe three common load balancing algorithms.",
+  "Write a regular expression that matches email addresses."
+]
