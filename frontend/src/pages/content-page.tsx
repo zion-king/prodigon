@@ -41,10 +41,14 @@ export function ContentPage() {
         setState('success');
       })
       .catch((err) => {
-        if (err instanceof ApiRequestError && err.status === 404) {
+        // if (err instanceof ApiRequestError && err.status === 404) {
+        //   setState('not-found');
+        // } else {
+        //   setState('error');
+        // }
+        if (err instanceof ApiRequestError || err.status === 404) { 
+          // using this in the meantime - `content not found` in either case, ignoring error loading content
           setState('not-found');
-        } else {
-          setState('error');
         }
       });
   }, [task, subtopic]);

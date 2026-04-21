@@ -45,7 +45,7 @@ function makeSubtopics(slug: string, implemented: boolean): Subtopic[] {
       label: 'Overview',
       filePath: base ? `${base}/README.md` : null,
       icon: BookOpen,
-      description: 'Concept explanation, comparisons, and diagrams',
+      description: 'Concepts, comparisons, and diagrams',
     },
     {
       id: 'lab',
@@ -59,14 +59,14 @@ function makeSubtopics(slug: string, implemented: boolean): Subtopic[] {
       label: 'Slides',
       filePath: base ? `${base}/slides.md` : null,
       icon: Presentation,
-      description: 'Slide deck outline for teaching this topic',
+      description: 'Slide presentation for this topic',
     },
     {
       id: 'production-reality',
       label: 'Production Reality',
       filePath: base ? `${base}/production_reality.md` : null,
       icon: AlertTriangle,
-      description: 'What breaks at scale, monitoring, and interview questions',
+      description: 'What breaks at scale and what senior engineers do about it',
     },
   ];
 }
