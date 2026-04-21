@@ -124,6 +124,7 @@ make run-docker    # Starts all services + frontend + nginx on :80
 
 ```
 prod-ai-system-design/
+├── architecture/               # Architecture documentation (v0)
 ├── baseline/                   # Backend services
 │   ├── api_gateway/            # Public API entry point (:8000)
 │   ├── model_service/          # LLM inference via Groq (:8001)
@@ -137,11 +138,6 @@ prod-ai-system-design/
 │   ├── src/                    # Components, stores, hooks, API client
 │   ├── Dockerfile              # Multi-stage build (Node → Nginx)
 │   └── nginx.conf              # SPA routing config
-├── architecture/               # Architecture documentation (v0)
-├── workshop/                   # Teaching materials
-│   ├── part1_design_patterns/  # Tasks 1-4 (complete)
-│   ├── part2_scalability/      # Tasks 5-8 (pending)
-│   └── part3_security/         # Tasks 9-11 (pending)
 ├── scripts/                    # setup.sh, run_all.sh, check_health.sh
 ├── .env.example
 ├── Makefile
@@ -213,4 +209,7 @@ For detailed architecture documentation, see [`architecture/README.md`](architec
 - [API Reference](architecture/api-reference.md) — complete endpoint documentation
 - [Data Flow](architecture/data-flow.md) — request lifecycle diagrams
 - [Design Decisions](architecture/design-decisions.md) — why things are built this way
+
+
+
 
