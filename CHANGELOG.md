@@ -24,6 +24,58 @@ Use it as the reference point for everything that follows.
 
 ---
 
+## 2026-04-23 — Local dev workflow: Postgres prerequisites wired into Make/setup
+
+### Added
+- **`make db-up` / `make db-down`** — spin up just the `postgres` service from
+  `baseline/docker-compose.yml` so bare-metal `make run` has a database to
+  talk to without running the full stack in Docker. `db-up` blocks until
+  `pg_isready` reports healthy (30s timeout).
+- **`make db-up-native`** — the no-Docker alternative. Assumes a native
+  Postgres is already installed and running on `localhost:5432` (EDB
+  installer on Windows, Homebrew on macOS, distro package on Linux) and
+  runs `scripts/db_bootstrap.sql` via `psql` to idempotently create the
+  `prodigon` role + `prodigon` database. Fails fast with install/start
+  hints per platform if `pg_isready` can't find a server.
+- **`scripts/db_bootstrap.sql`** — guarded `CREATE ROLE` / `CREATE DATABASE`
+  for the native path. Safe to re-run; `db-up-native` invokes it every time.
+- **`make db-migrate`** — thin wrapper around `cd baseline && alembic upgrade head`.
+  Idempotent; safe to run repeatedly. Works against both Docker and native
+  Postgres since it only cares about `$DATABASE_URL`.
+- **`make db-revision M="message"`** — autogenerate a new Alembic revision
+  against the current models.
+- **`make dev-setup` / `make dev-setup-native`** — one-shot targets that
+  chain `setup` + (`db-up` or `db-up-native`) + `db-migrate`. Pick whichever
+  matches your Postgres install.
+- **Postgres preflight in `scripts/run_all.sh`** — opens a TCP socket to the
+  host/port parsed out of `DATABASE_URL` and fails fast with an actionable
+  hint (`make db-up` / `make db-up-native`) instead of letting uvicorn boot
+  into a broken state. The script now also runs `alembic upgrade head` on
+  every boot (idempotent at head), so a stale schema can't silently drift.
+
+### Changed
+- **`.env.example`** now includes `DATABASE_URL` with a comment pointing at
+  `make db-up` / `make db-migrate`, flips `QUEUE_TYPE` default from `memory`
+  to `postgres` (the durable SKIP LOCKED queue introduced in the persistence
+  landing), and adds `http://localhost:5173` to `ALLOWED_ORIGINS` so the
+  Vite dev server can hit the gateway without CORS rejection.
+- **`scripts/setup.sh`** sources `.env`, probes Postgres via `pg_isready`
+  (with a Python socket fallback for machines that don't ship it), runs
+  `alembic upgrade head` when reachable, and prints next-steps that cover
+  both Docker (`db-up`) and native (`db-up-native`) paths.
+
+### Why
+Postgres persistence (previous entry) assumed a Docker-first workflow — the
+gateway/worker Dockerfiles run `alembic upgrade head` on boot. Developers
+running `make run` directly hit 500s on first request because migrations
+never ran and `DATABASE_URL` wasn't in `.env.example`. The native path was
+added so contributors without Docker installed can still get a working
+local stack — install Postgres via their platform's package manager,
+`make db-up-native` provisions the role/db, `make db-migrate` applies the
+schema, `make run` just works.
+
+---
+
 ## 2026-04-23 — Frontend: Chat sessions migrated from in-memory to server-backed
 
 ### Added
@@ -282,7 +334,7 @@ Use it as the reference point for everything that follows.
 
 ---
 
-## 2026-04-21 — Polished Frontend v1
+## 2026-04-20 — Polished Frontend v1
 
 Large-scale overhaul of `frontend/` to turn a functional chat demo into a
 workshop-grade teaching platform. No new npm dependencies were introduced

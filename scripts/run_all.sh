@@ -19,6 +19,27 @@ fi
 # Ensure local service URLs
 export MODEL_SERVICE_URL="${MODEL_SERVICE_URL:-http://localhost:8001}"
 export WORKER_SERVICE_URL="${WORKER_SERVICE_URL:-http://localhost:8002}"
+export DATABASE_URL="${DATABASE_URL:-postgresql+asyncpg://prodigon:prodigon@localhost:5432/prodigon}"
+
+# --- Preflight: Postgres reachable? -----------------------------------------
+# The gateway and worker will blow up on the first request otherwise — much
+# nicer to fail fast here with an actionable hint.
+PG_URL_REGEX='.*@([^:/]+):([0-9]+)/.*'
+if [[ "$DATABASE_URL" =~ $PG_URL_REGEX ]]; then
+    PG_HOST="${BASH_REMATCH[1]}"
+    PG_PORT="${BASH_REMATCH[2]}"
+    if ! python -c "import socket,sys; s=socket.socket(); s.settimeout(1); sys.exit(0 if s.connect_ex(('${PG_HOST}', ${PG_PORT}))==0 else 1)" 2>/dev/null; then
+        echo "ERROR: Postgres not reachable at ${PG_HOST}:${PG_PORT}." >&2
+        echo "  Start it with: make db-up" >&2
+        echo "  Then migrate:  make db-migrate" >&2
+        exit 1
+    fi
+fi
+
+# --- Preflight: migrations applied? -----------------------------------------
+# Run `alembic upgrade head` every boot — it's idempotent when already at head.
+echo "Applying Alembic migrations..."
+(cd "$BASELINE_DIR" && alembic upgrade head)
 
 echo "================================================"
 echo "  Starting all services..."
