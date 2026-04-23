@@ -2,7 +2,7 @@
 // App — root component that ties together global providers and routing
 // ---------------------------------------------------------------------------
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AppRouter } from '@/router';
 import ErrorBoundary from '@/components/shared/error-boundary';
 import ConnectionBanner from '@/components/shared/connection-banner';
@@ -24,7 +24,13 @@ export default function App() {
   useHealthPoll();
 
   const { toggleSidebar, toggleTopicsPanel } = useSettingsStore();
-  const { activeSession } = useChatStore();
+  const { activeSession, hydrate } = useChatStore();
+
+  // Pull chat sessions from the server once on mount. The store guards
+  // against duplicate hydrations, so re-renders don't re-fetch.
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
 
   const handleExportChat = useCallback(() => {
     const session = activeSession();

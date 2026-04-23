@@ -68,7 +68,9 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
         icon: Plus,
         group: 'Actions',
         action: () => {
-          createSession();
+          // createSession is async; fire-and-forget — navigation happens
+          // immediately and ChatPage renders once activeSessionId is set.
+          void createSession();
           navigate('/');
           handleClose();
         },
@@ -108,11 +110,13 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps) {
     const sessionItems: CommandItem[] = sessions.slice(0, 5).map((s) => ({
       id: `session-${s.id}`,
       label: s.title,
-      description: `${s.messages.length} messages`,
+      description: `${s.messageCount} messages`,
       icon: MessageSquare,
       group: 'Recent Sessions',
       action: () => {
-        setActiveSession(s.id);
+        // setActiveSession is async (lazy-loads messages); don't block the
+        // palette close on the round-trip.
+        void setActiveSession(s.id);
         navigate('/');
         handleClose();
       },

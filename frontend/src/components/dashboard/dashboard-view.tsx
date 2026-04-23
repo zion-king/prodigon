@@ -13,10 +13,10 @@ export function DashboardView() {
   const sessions = useChatStore((s) => s.sessions);
 
   const totalSessions = sessions.length;
-  const totalMessages = sessions.reduce(
-    (sum, s) => sum + s.messages.length,
-    0,
-  );
+  // Use messageCount (server-reported) rather than messages.length — most
+  // sessions are summary-only until the user actively opens them, so
+  // messages.length would undercount the real total.
+  const totalMessages = sessions.reduce((sum, s) => sum + s.messageCount, 0);
 
   return (
     <div className="h-full overflow-y-auto p-6 space-y-6">

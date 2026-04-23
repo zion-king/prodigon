@@ -28,7 +28,14 @@ function formatRelativeTime(ts: number): string {
 }
 
 export function ChatView({ sessionId }: ChatViewProps) {
-  const { activeSession, addMessage, updateMessage, appendToMessage } = useChatStore();
+  const {
+    activeSession,
+    persistUserMessage,
+    addAssistantPlaceholder,
+    appendToMessage,
+    updateMessage,
+    persistAssistantMessage,
+  } = useChatStore();
   const { model, temperature, maxTokens, topicSystemPrompt, systemPrompt, setTopicSystemPrompt } =
     useSettingsStore();
   const { isStreaming, start, stop } = useStream();
@@ -45,16 +52,12 @@ export function ChatView({ sessionId }: ChatViewProps) {
       const currentSystemPrompt = topicSystemPrompt ?? systemPrompt;
       if (topicSystemPrompt) setTopicSystemPrompt(null);
 
-      // 1. Add user message
-      addMessage(sessionId, { role: 'user', content: prompt });
+      // 1. Add + persist user message (fire-and-forget POST inside the store)
+      void persistUserMessage(sessionId, prompt);
 
-      // 2. Create assistant placeholder
-      const assistantId = addMessage(sessionId, {
-        role: 'assistant',
-        content: '',
-        model,
-        isStreaming: true,
-      });
+      // 2. Create assistant placeholder with a temp id; the store will swap
+      //    the temp id for the server's real UUID once persistence succeeds.
+      const assistantId = addAssistantPlaceholder(sessionId, model);
 
       const startTime = performance.now();
 
@@ -77,8 +80,13 @@ export function ChatView({ sessionId }: ChatViewProps) {
               isStreaming: false,
               latencyMs,
             });
+            // Persist the completed assistant turn. Runs after local update
+            // so the meta payload includes the finalized latency.
+            void persistAssistantMessage(sessionId, assistantId);
           },
           onError: (error) => {
+            // Mark the placeholder as failed but don't persist — a blank or
+            // half-streamed turn isn't worth saving.
             updateMessage(sessionId, assistantId, {
               isStreaming: false,
               error,
@@ -90,7 +98,8 @@ export function ChatView({ sessionId }: ChatViewProps) {
     [
       sessionId, model, temperature, maxTokens, isStreaming,
       topicSystemPrompt, systemPrompt,
-      addMessage, updateMessage, appendToMessage, start, setTopicSystemPrompt,
+      persistUserMessage, addAssistantPlaceholder, updateMessage, appendToMessage,
+      persistAssistantMessage, start, setTopicSystemPrompt,
     ],
   );
 

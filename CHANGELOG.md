@@ -24,6 +24,84 @@ Use it as the reference point for everything that follows.
 
 ---
 
+## 2026-04-23 — Frontend: Chat sessions migrated from in-memory to server-backed
+
+### Added
+- **`frontend/src/api/chat.ts`** — typed wrappers around `/api/v1/chat/*`
+  (`listSessions`, `getSession`, `createSession`, `updateSession`,
+  `deleteSession`, `appendMessage`), plus DTO→store-shape mappers
+  (`mapSessionSummary`, `mapSessionDetail`). The server sends ISO 8601
+  timestamps; mappers convert to epoch ms so the rest of the app doesn't
+  need to care about the boundary.
+- **`patch` and `del` verbs on `HttpClient`** (`frontend/src/api/client.ts`).
+  `del` doesn't parse a body (gateway returns 204); the generic `request`
+  method gained a `parseJson` flag to support that.
+- **Lazy message loading** on the chat store: `setActiveSession(id)` is
+  now async, and the first time a session becomes active it fetches
+  `GET /api/v1/chat/sessions/:id` to populate messages. The sessions
+  list endpoint returns summaries only, so the initial payload stays
+  small even if a user has many sessions.
+
+### Changed
+- **`frontend/src/stores/chat-store.ts`** is a near-total rewrite. The
+  store is now a cache of server state; every mutation persists through
+  the chat API:
+  - `hydrate()` — pulls the session list on app mount, auto-selects the
+    most recent session, eagerly loads its messages so first paint shows
+    real content (not an empty state).
+  - `createSession` / `deleteSession` / `renameSession` — async,
+    optimistic locally, confirmed on the server. Deletes roll back the
+    local state if the server call fails.
+  - `persistUserMessage(sessionId, content)` — optimistic local add with
+    a temp id, followed by POST; the temp id is swapped for the server
+    UUID when the response returns.
+  - `addAssistantPlaceholder` + `appendToMessage` + `updateMessage` +
+    `persistAssistantMessage` — the streaming flow. The assistant turn
+    runs entirely against a client-side temp id until `onDone`, at
+    which point `persistAssistantMessage` POSTs the completed content
+    and reconciles the id. Failed streams are deliberately not saved.
+  - Auto-titling the session from the first user message still works
+    client-side; the new title is pushed to the server via PATCH so the
+    sidebar stays consistent.
+- **`frontend/src/App.tsx`** calls `useChatStore.getState().hydrate()`
+  in a mount-effect. The store guards against duplicate invocations so
+  re-renders don't re-fetch.
+- **`frontend/src/pages/chat-page.tsx`** waits for `hydrated` before
+  deciding whether to create a new session, so returning users don't
+  get a spurious "New Chat" row every page load.
+- **`frontend/src/components/chat/chat-view.tsx`** swapped the old
+  `addMessage`/`updateMessage` pair for the new
+  `persistUserMessage` + `addAssistantPlaceholder` +
+  `persistAssistantMessage` flow.
+- **`frontend/src/components/layout/sidebar.tsx`**,
+  **`frontend/src/components/layout/mobile-nav.tsx`**,
+  **`frontend/src/components/ui/command-palette.tsx`**,
+  **`frontend/src/components/topics/content-viewer.tsx`** — updated for
+  the new async store surface (`await createSession()`,
+  `void setActiveSession(id)`, `void deleteSession(id)`).
+- **`ChatSession`** gains a `messageCount: number` field populated from
+  the server so the sidebar and dashboard can show totals for sessions
+  whose messages haven't been lazy-loaded yet. Used in
+  `command-palette.tsx` (recent-session row) and `dashboard-view.tsx`
+  (total-messages aggregate) — previously both read
+  `s.messages.length` and undercounted.
+
+### Notes
+- Chat sessions now survive page refresh, tab close, and
+  browser-switch. Clearing localStorage no longer loses history — the
+  server is the source of truth.
+- Authentication is still not wired; every session is attributed to the
+  seeded default user (`00000000-0000-0000-0000-000000000001`). Once
+  Part III (security) lands, swapping to a real authenticated user id
+  becomes a one-line change in
+  `baseline/api_gateway/app/routes/chat.py::_repo`.
+- Partial streaming responses are intentionally not persisted. If the
+  user refreshes mid-stream, they lose the in-flight assistant turn.
+  This is a deliberate simplification — saving half-rendered markdown
+  or truncated code blocks is worse UX than losing the turn.
+
+---
+
 ## 2026-04-23 — Backend: Postgres persistence (chat sessions, messages, batch jobs, users)
 
 ### Added

@@ -50,14 +50,15 @@ export function MobileNav() {
 
   const close = () => setSidebarOpen(false);
 
-  const handleNewChat = () => {
-    createSession();
+  const handleNewChat = async () => {
+    await createSession();
     navigate('/');
     close();
   };
 
   const handleSessionClick = (id: string) => {
-    setActiveSession(id);
+    // setActiveSession is async (lazy-loads messages); navigate without waiting.
+    void setActiveSession(id);
     navigate('/');
     close();
   };
@@ -137,7 +138,7 @@ export function MobileNav() {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  deleteSession(session.id);
+                  void deleteSession(session.id);
                 }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all"
                 aria-label="Delete session"

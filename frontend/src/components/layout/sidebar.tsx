@@ -41,13 +41,14 @@ export function Sidebar() {
     useChatStore();
   const { sidebarOpen, toggleSidebar } = useSettingsStore();
 
-  const handleNewChat = () => {
-    createSession();
+  const handleNewChat = async () => {
+    await createSession();
     navigate('/');
   };
 
   const handleSessionClick = (id: string) => {
-    setActiveSession(id);
+    // fire-and-forget — setActiveSession lazy-loads messages from the server
+    void setActiveSession(id);
     navigate('/');
   };
 
@@ -105,7 +106,7 @@ export function Sidebar() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                deleteSession(session.id);
+                void deleteSession(session.id);
               }}
               className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all"
               aria-label="Delete session"

@@ -37,9 +37,30 @@ class HttpClient {
     });
   }
 
+  async patch<T>(path: string, body: unknown): Promise<T> {
+    return this.request<T>(path, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
+
+  /**
+   * DELETE — returns void because 204 No Content has no body to parse.
+   * Keeping the shape narrow avoids a JSON.parse on an empty response.
+   */
+  async del(path: string): Promise<void> {
+    await this.request<void>(path, { method: 'DELETE' }, { parseJson: false });
+  }
+
   // ---- Internal ----
 
-  private async request<T>(path: string, init: RequestInit): Promise<T> {
+  private async request<T>(
+    path: string,
+    init: RequestInit,
+    opts: { parseJson?: boolean } = {},
+  ): Promise<T> {
+    const parseJson = opts.parseJson ?? true;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -53,6 +74,9 @@ class HttpClient {
         await this.handleErrorResponse(response);
       }
 
+      if (!parseJson || response.status === 204) {
+        return undefined as T;
+      }
       return (await response.json()) as T;
     } catch (error) {
       if (error instanceof ApiRequestError) throw error;

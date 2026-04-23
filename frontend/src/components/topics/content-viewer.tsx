@@ -59,11 +59,13 @@ export function ContentViewer({ task, subtopic, state, content }: ContentViewerP
     return () => observer.disconnect();
   }, [state, read, task.id, subtopic.id, markAsRead]);
 
-  const handleChatAboutThis = () => {
+  const handleChatAboutThis = async () => {
     setTopicSystemPrompt(
       `You are discussing: ${task.title} — ${subtopic.label}. The user is studying production AI system design. Help with practical examples, trade-offs, and production considerations.`,
     );
-    createSession();
+    // createSession is async now (server round-trip); await so the new
+    // session is selected before we navigate to the chat view.
+    await createSession();
     navigate('/');
     toast.info('Opening chat with topic context');
   };
