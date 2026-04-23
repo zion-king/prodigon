@@ -109,7 +109,14 @@ function MermaidBlock({ code, streaming }: { code: string; streaming?: boolean }
           fontFamily: 'Inter, system-ui, sans-serif',
         });
 
-        const { svg } = await mermaid.render(`mermaid-${uid}`, code.trim());
+        const source = code.trim();
+        // mermaid v11 render() does NOT throw on invalid syntax — it silently
+        // returns an SVG containing "Syntax error in text". mermaid.parse()
+        // does throw, with a specific message like
+        // "Parse error on line 2: expecting 'NODE', got 'PARTICIPANT'".
+        // Gate render() on parse() so bad syntax falls through to our catch.
+        await mermaid.parse(source);
+        const { svg } = await mermaid.render(`mermaid-${uid}`, source);
         if (!cancelled && containerRef.current) {
           containerRef.current.innerHTML = svg;
           // Make SVG responsive
@@ -138,7 +145,17 @@ function MermaidBlock({ code, streaming }: { code: string; streaming?: boolean }
           <AlertCircle className="h-3.5 w-3.5 shrink-0" />
           <span className="font-medium">Diagram render error</span>
         </div>
-        <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">{code}</pre>
+        {/* Mermaid's actual parser message — exposes *why* the syntax failed
+            (e.g. mixed flowchart/sequenceDiagram keywords, invalid arrows). */}
+        <p className="text-xs text-destructive/90 mb-2 font-mono whitespace-pre-wrap break-words">
+          {error}
+        </p>
+        <details className="text-xs">
+          <summary className="cursor-pointer text-muted-foreground hover:text-foreground select-none">
+            Show source
+          </summary>
+          <pre className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap font-mono">{code}</pre>
+        </details>
       </div>
     );
   }
