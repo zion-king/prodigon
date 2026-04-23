@@ -15,6 +15,12 @@ dependencies = [
     "httpx>=0.27.0",
     "structlog>=24.0",
     "groq>=0.11.0",
+    # --- Persistence (Postgres) ---
+    # SQLAlchemy 2.x ships a native async API; asyncpg is the fastest Postgres
+    # driver for asyncio. Alembic handles schema migrations.
+    "sqlalchemy[asyncio]>=2.0.30",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.0",
 ]
 
 [project.optional-dependencies]

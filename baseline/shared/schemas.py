@@ -74,6 +74,69 @@ class JobResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Chat session schemas (persistence)
+# ---------------------------------------------------------------------------
+
+class ChatMessageRole(str, Enum):
+    """Valid roles for a chat message turn."""
+
+    USER = "user"
+    ASSISTANT = "assistant"
+    SYSTEM = "system"
+
+
+class ChatMessageCreate(BaseModel):
+    """Input schema when appending a message to a session."""
+
+    role: ChatMessageRole
+    content: str = Field(..., min_length=1)
+    meta: dict | None = None
+
+
+class ChatMessageOut(BaseModel):
+    """Single persisted message returned to clients."""
+
+    id: str
+    session_id: str
+    role: ChatMessageRole
+    content: str
+    meta: dict | None = None
+    created_at: datetime
+
+
+class ChatSessionCreate(BaseModel):
+    """Input schema when creating a new session."""
+
+    title: str | None = Field(None, max_length=200)
+    system_prompt: str | None = None
+
+
+class ChatSessionUpdate(BaseModel):
+    """Input schema when renaming / updating a session."""
+
+    title: str | None = Field(None, max_length=200)
+    system_prompt: str | None = None
+
+
+class ChatSessionOut(BaseModel):
+    """Session metadata returned by list endpoints (no messages)."""
+
+    id: str
+    user_id: str
+    title: str
+    system_prompt: str | None
+    created_at: datetime
+    updated_at: datetime
+    message_count: int = 0
+
+
+class ChatSessionDetail(ChatSessionOut):
+    """Session detail including its messages."""
+
+    messages: list[ChatMessageOut] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
 # Health schemas
 # ---------------------------------------------------------------------------
 

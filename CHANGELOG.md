@@ -24,6 +24,99 @@ Use it as the reference point for everything that follows.
 
 ---
 
+## 2026-04-23 — Backend: Postgres persistence (chat sessions, messages, batch jobs, users)
+
+### Added
+- **New Postgres service** in `baseline/docker-compose.yml`
+  (`postgres:16-alpine`, named volume `postgres-data`, `pg_isready`
+  healthcheck). `api-gateway` and `worker-service` now gate startup on
+  `postgres: condition: service_healthy` via compose, so they never race
+  the DB.
+- **`baseline/shared/db.py`** — shared async SQLAlchemy engine, session
+  factory, and `DeclarativeBase`. One engine per process,
+  `expire_on_commit=False` for async-friendly ORM objects,
+  `pool_pre_ping=True` to survive DB restarts. Exposes `get_session` as a
+  FastAPI dependency and `dispose_engine` for lifespan shutdown.
+- **`baseline/shared/models.py`** — ORM models for the four baseline
+  tables:
+  - `users` — minimal account row; a seeded default user
+    (`00000000-0000-0000-0000-000000000001`) attributes ownership until
+    Part III's auth work replaces it.
+  - `chat_sessions` — per-user conversation threads with `title` and
+    optional per-session `system_prompt`.
+  - `chat_messages` — ordered turns within a session; `role` ∈
+    `{user, assistant, system}`; JSONB `meta` for token-usage metadata.
+  - `batch_jobs` — durable replacement for the in-memory worker queue;
+    JSONB `prompts`/`results`, status stored as `VARCHAR` for migration
+    simplicity. Foreign keys cascade appropriately (`chat_messages` ON
+    DELETE CASCADE; `batch_jobs.user_id` ON DELETE SET NULL).
+- **Alembic migrations** — `baseline/alembic.ini`, `baseline/alembic/env.py`
+  (async-aware via `run_sync`), and the initial revision
+  `20260423_0900_initial_baseline_schema.py`. The migration creates all
+  four tables plus indexes on high-selectivity columns
+  (`chat_sessions.user_id`, `chat_messages.session_id`,
+  `chat_messages.created_at`, `batch_jobs.status`,
+  `batch_jobs.created_at`, `batch_jobs.user_id`) and seeds the default
+  user. `env.py` reads `DATABASE_URL` from env so compose and local dev
+  share the same migration script.
+- **`baseline/api_gateway/Dockerfile`** runs `alembic upgrade head`
+  before starting uvicorn — the first gateway container that boots
+  against a fresh DB applies migrations idempotently, so there is no
+  manual operator step.
+- **`baseline/worker_service/app/services/queue.py`** gains a
+  `PostgresQueue` implementation alongside the existing `InMemoryQueue`.
+  Dequeue uses `SELECT ... FOR UPDATE SKIP LOCKED`, which lets multiple
+  worker processes compete on the same `batch_jobs` table safely — each
+  pending row goes to exactly one worker, and concurrent consumers skip
+  past locked rows instead of blocking. Worker `queue_type` now defaults
+  to `postgres`; `memory` remains for no-DB quick-start demos.
+- **Chat persistence endpoints** in the gateway (`/api/v1/chat/...`):
+  - `POST   /sessions` — create a session
+  - `GET    /sessions` — list sessions (metadata + message counts,
+    ordered by recent activity)
+  - `GET    /sessions/{id}` — session detail including ordered messages
+  - `PATCH  /sessions/{id}` — rename / update `system_prompt`
+  - `DELETE /sessions/{id}` — cascades to messages
+  - `POST   /sessions/{id}/messages` — append a turn
+  Implemented behind a `ChatRepository` service object
+  (`baseline/api_gateway/app/services/chat_repository.py`) so route
+  handlers stay focused on HTTP concerns and tests can stub the
+  repository directly.
+- **Chat Pydantic schemas** in `baseline/shared/schemas.py`:
+  `ChatMessageRole`, `ChatMessageCreate`, `ChatMessageOut`,
+  `ChatSessionCreate`, `ChatSessionUpdate`, `ChatSessionOut`,
+  `ChatSessionDetail`.
+
+### Changed
+- **`baseline/worker_service/app/config.py`** — default `queue_type`
+  flipped from `"memory"` to `"postgres"` so baseline behaviour is
+  durable out of the box. `"memory"` remains opt-in.
+- **`baseline/worker_service/app/dependencies.py`** — `init_dependencies`
+  now threads `shared.db.get_sessionmaker()` into the queue factory when
+  `queue_type == "postgres"`, so the queue and any future DB-aware
+  worker code share one connection pool.
+- **Lifespan shutdown** in both `api_gateway/app/main.py` and
+  `worker_service/app/main.py` now calls `await dispose_engine()` so the
+  pool closes cleanly on `docker stop`.
+- **`pyproject.toml`** and both services' `requirements.txt` pick up
+  `sqlalchemy[asyncio]>=2.0.30`, `asyncpg>=0.29.0`, `alembic>=1.13.0`.
+
+### Notes
+- The frontend still persists chat sessions to `localStorage`; wiring
+  the React chat store to the new endpoints is follow-up work,
+  deliberately out of scope for this landing. Backend capability is in
+  place; the frontend migration will be its own changelog entry.
+- Auth is not yet real. Every write attributes to the seeded default
+  user. The repository layer already scopes reads and writes by
+  `user_id`, so swapping to a real `get_current_user` dependency in
+  Part III is a one-line route change per endpoint.
+- Baseline throughput (human-scale batches) doesn't justify Redis for
+  the job queue yet. Postgres + `SKIP LOCKED` is well within its
+  capability envelope. Task 8 (Load Balancing & Caching) is where we
+  introduce Redis for latency-sensitive paths.
+
+---
+
 ## 2026-04-23 — Backend: Client-disconnect handling on SSE streaming
 
 ### Fixed

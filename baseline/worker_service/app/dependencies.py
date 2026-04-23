@@ -2,10 +2,15 @@
 FastAPI dependency injection for the Worker Service.
 
 Manages the queue, processor, and service client instances.
+
+The queue is constructed from config — `queue_type=postgres` (the baseline
+default when running under docker-compose) wires in a sessionmaker from
+`shared.db`, so the worker reads and writes `batch_jobs` directly.
 """
 
 from functools import lru_cache
 
+from shared.db import get_sessionmaker
 from shared.http_client import ServiceClient
 from worker_service.app.config import WorkerServiceSettings
 from worker_service.app.services.processor import JobProcessor
@@ -24,10 +29,15 @@ _model_client: ServiceClient | None = None
 
 
 def init_dependencies(settings: WorkerServiceSettings) -> tuple[BaseQueue, JobProcessor, ServiceClient]:
-    """Create all dependencies during app startup."""
+    """Create all dependencies during app startup.
+
+    For the Postgres queue we pass the shared sessionmaker so the queue and
+    any future DB-aware code share one connection pool.
+    """
     global _queue, _processor, _model_client
 
-    _queue = create_queue(settings.queue_type)
+    sm = get_sessionmaker() if settings.queue_type == "postgres" else None
+    _queue = create_queue(settings.queue_type, sessionmaker=sm)
     _model_client = ServiceClient(base_url=settings.model_service_url)
     _processor = JobProcessor(model_service_client=_model_client, queue=_queue)
 

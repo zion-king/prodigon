@@ -8,7 +8,8 @@
 #   - model-service  :8001  — LLM inference (Groq API)
 #   - worker-service :8002  — background job processing
 #   - nginx          :80    — reverse proxy
-#   - redis          :6379  — queue backend (optional, for Task 8)
+#   - postgres       :5432  — durable storage (chat sessions, batch jobs, users)
+#   - redis          :6379  — queue/cache backend (optional, for Task 8)
 # =============================================================================
 
 services:
@@ -37,9 +38,14 @@ services:
     environment:
       - MODEL_SERVICE_URL=http://model-service:8001
       - WORKER_SERVICE_URL=http://worker-service:8002
+      - DATABASE_URL=postgresql+asyncpg://prodigon:prodigon@postgres:5432/prodigon
     depends_on:
-      - model-service
-      - worker-service
+      model-service:
+        condition: service_started
+      worker-service:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     networks:
       - ai-platform-net
 
@@ -66,8 +72,13 @@ services:
       - ../.env
     environment:
       - MODEL_SERVICE_URL=http://model-service:8001
+      - DATABASE_URL=postgresql+asyncpg://prodigon:prodigon@postgres:5432/prodigon
+      - QUEUE_TYPE=postgres
     depends_on:
-      - model-service
+      model-service:
+        condition: service_started
+      postgres:
+        condition: service_healthy
     networks:
       - ai-platform-net
 
@@ -81,6 +92,31 @@ services:
     networks:
       - ai-platform-net
 
+  # --- Postgres (durable storage) ---
+  # Stores chat sessions/messages, batch jobs (survives restarts), and users.
+  # The baseline schema is applied via Alembic migrations on gateway/worker
+  # startup — see baseline/alembic/.
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: prodigon
+      POSTGRES_PASSWORD: prodigon
+      POSTGRES_DB: prodigon
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # `pg_isready` exits 0 only once the server accepts connections. Other
+      # services wait on this via `depends_on.condition: service_healthy` so
+      # they don't race the DB on startup.
+      test: ["CMD-SHELL", "pg_isready -U prodigon -d prodigon"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks:
+      - ai-platform-net
+
   # --- Redis (optional, used in Task 8) ---
   redis:
     image: redis:7-alpine
@@ -88,6 +124,9 @@ services:
       - "6379:6379"
     networks:
       - ai-platform-net
+
+volumes:
+  postgres-data:
 
 networks:
   ai-platform-net:

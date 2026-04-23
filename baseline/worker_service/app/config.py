@@ -17,7 +17,10 @@ class WorkerServiceSettings(BaseServiceSettings):
     model_service_url: str = DEFAULT_MODEL_SERVICE_URL
 
     # Queue configuration
-    queue_type: str = "memory"  # "memory" or "redis"
+    # "postgres" is the baseline default — durable across restarts.
+    # "memory" is kept for quick-start demos with no DB dependency.
+    # "redis" is deferred to Task 8 (Load Balancing & Caching).
+    queue_type: str = "postgres"
     redis_url: str = "redis://localhost:6379/0"
 
     # Worker behavior

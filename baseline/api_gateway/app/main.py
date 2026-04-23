@@ -21,7 +21,8 @@ from api_gateway.app.config import GatewaySettings
 from api_gateway.app.dependencies import get_model_client, get_settings, get_worker_client, init_dependencies
 from api_gateway.app.middleware.logging_mw import RequestLoggingMiddleware
 from api_gateway.app.middleware.timing import TimingMiddleware
-from api_gateway.app.routes import generate, health, jobs, workshop
+from api_gateway.app.routes import chat, generate, health, jobs, workshop
+from shared.db import dispose_engine
 from shared.errors import AppError
 from shared.logging import get_logger, setup_logging
 
@@ -44,6 +45,7 @@ async def lifespan(app: FastAPI):
 
     await model_client.close()
     await worker_client.close()
+    await dispose_engine()
     logger.info("api_gateway_stopped")
 
 
@@ -70,6 +72,7 @@ app.include_router(health.router, tags=["health"])
 app.include_router(generate.router)
 app.include_router(jobs.router)
 app.include_router(workshop.router)
+app.include_router(chat.router)
 
 
 @app.exception_handler(AppError)

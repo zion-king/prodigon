@@ -15,6 +15,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from shared.db import dispose_engine
 from shared.errors import AppError
 from shared.logging import get_logger, setup_logging
 from worker_service.app.dependencies import get_model_client, get_processor, get_queue, get_settings, init_dependencies
@@ -49,6 +50,7 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         pass
     await model_client.close()
+    await dispose_engine()
     logger.info("worker_service_stopped")
 
 
