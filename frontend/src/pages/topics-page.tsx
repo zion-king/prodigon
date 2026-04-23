@@ -7,7 +7,7 @@ import { Lock, Clock, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TASKS_BY_PART, PART_LABELS, type PartId } from '@/lib/topics-data';
 
-const PARTS: PartId[] = ['I', 'II', 'III'];
+const PARTS: PartId[] = ['0', 'I', 'II', 'III'];
 
 const DIFFICULTY_COLORS = {
   beginner: 'bg-green-500/10 text-green-600 dark:text-green-400',

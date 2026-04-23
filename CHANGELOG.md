@@ -24,6 +24,58 @@ Use it as the reference point for everything that follows.
 
 ---
 
+## 2026-04-23 — Workshop Part 0: Baseline Introduction
+
+### Added
+- **`workshop/part0_introduction/`** — six-lesson preparatory module that
+  tours the baseline system before attendees tackle Part I refactors. Follows
+  Part I's file conventions exactly (`README.md` / `slides.md` /
+  `production_reality.md` / `lab/`), so the Topics Panel and Content Viewer
+  render it with zero component changes.
+  - **0.1 Getting Started** — dev environment walkthrough (Makefile targets,
+    `.env`, Postgres Docker vs native, `make health`). Full lab with
+    `starter/` + `solution/` including a `verify.py` smoke test.
+  - **0.2 System Architecture Tour** — 3-service split, `shared/` module,
+    request pipeline. Lightweight lab.
+  - **0.3 Service Lifecycle & Dependency Injection** — FastAPI lifespan,
+    module-global init, `Depends()`. Full lab: attendees wire a
+    request-counter dep through the DI system and verify with pytest.
+  - **0.4 Request Flows — Sync, Streaming, Jobs** — trace a request through
+    sync `/generate`, SSE `/generate/stream`, and the Postgres-backed job
+    queue; watch `request_id` propagate across services. Lightweight lab.
+  - **0.5 Persistence, Config, and Observability** — ORM models, Alembic,
+    Pydantic Settings, structlog, `AppError` hierarchy. Lightweight lab.
+  - **0.6 Frontend Primer** — three-panel layout, Zustand stores, SSE token
+    reconciliation, localStorage keys. Lightweight lab.
+- **`workshop/README.md`** — Part 0 section added at the top of the Parts
+  listing with a prominent "New to the baseline?" callout directing newcomers
+  to Part 0 before Part I. Updated the Suggested Workshop Formats section
+  with a Part-0-only half-day format and a Part-0-plus-Part-I full-day format.
+
+### Changed
+- **`frontend/src/lib/topics-data.ts`** — extended `PartId` to
+  `'0' | 'I' | 'II' | 'III'`, generalised `makeSubtopics` to accept a
+  `partPrefix` parameter (defaults to `'part1_design_patterns'` so existing
+  Part I callers are untouched), prepended six Part 0 task entries with
+  decimal `taskNumber`s (0.1–0.6) for clean display, and added Part 0 to
+  `PART_LABELS` + `TASKS_BY_PART`.
+- **`frontend/src/pages/topics-page.tsx`** and
+  **`frontend/src/components/topics/topic-tree.tsx`** — `PARTS` array bumped
+  from `['I', 'II', 'III']` to `['0', 'I', 'II', 'III']` so the Topics page
+  and Topics Panel accordion render Part 0 first.
+
+### Why
+Parts I–III teach refactors of the baseline, but the repo had no orientation
+material for the baseline itself. A newcomer landing on Task 1 (REST vs gRPC)
+already had to understand the 3-service split, `shared/`, lifespans, DI, all
+three request flows, Postgres-backed persistence, migrations, structured
+logging, and the error hierarchy — a cliff. Part 0 flattens that cliff into
+six digestible lessons, so attendees arrive at Task 1 with a mental model
+instead of a guess. The Topics Panel surfaces Part 0 first, so the
+guided reading path is obvious without any curriculum prose.
+
+---
+
 ## 2026-04-23 — Local dev workflow: Postgres prerequisites wired into Make/setup
 
 ### Added

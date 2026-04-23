@@ -9,6 +9,21 @@ Before starting any task:
 2. Verify the baseline runs: `make run` (or `make run-docker`)
 3. Set `USE_MOCK=true` in `.env` if you don't have a Groq API key
 
+> **New to the baseline?** Work through **[Part 0](#part-0-baseline-introduction)** first. It tours the existing system (architecture, lifecycle, request flows, persistence, frontend) so Part I's refactors make sense.
+
+## Part 0: Baseline Introduction
+
+Orientation module. Tours the current production-AI baseline so newcomers have a mental model before Part I starts refactoring it. Finish Part 0 and you'll know *what* you're changing and *why* — instead of guessing.
+
+| Lesson | Topic | Time | Difficulty | Lab |
+|--------|-------|------|------------|-----|
+| [0.1](part0_introduction/task01_getting_started/) | Getting Started — Dev Environment Walkthrough | 45 min | Beginner | Full (starter + solution) |
+| [0.2](part0_introduction/task02_system_architecture/) | System Architecture Tour | 30 min | Beginner | Lightweight |
+| [0.3](part0_introduction/task03_lifecycle_and_di/) | Service Lifecycle & Dependency Injection | 45 min | Intermediate | Full (starter + solution) |
+| [0.4](part0_introduction/task04_request_flows/) | Request Flows — Sync, Streaming, Jobs | 45 min | Intermediate | Lightweight |
+| [0.5](part0_introduction/task05_persistence_observability/) | Persistence, Config, and Observability | 45 min | Intermediate | Lightweight |
+| [0.6](part0_introduction/task06_frontend_primer/) | Frontend Primer — Layout, Stores, Streaming | 45 min | Beginner | Lightweight |
+
 ## Part I: Design Patterns for GenAI Systems
 
 | Task | Topic | Time | Difficulty | Prerequisites |
@@ -50,16 +65,19 @@ taskNN_topic/
 
 ## Suggested Workshop Formats
 
-### Half-Day (4 hours)
-Pick 2-3 tasks. Recommended: Tasks 2, 1, 4
+### Half-Day (4 hours) — Part 0 only
+All 6 Part 0 lessons in order. Attendees leave with a full mental model of the baseline and can independently extend it afterwards.
 
-### Full-Day (8 hours)
-All 4 Part I tasks in order: 2 → 4 → 1 → 3
+### Half-Day (4 hours) — Part I only
+Pick 2-3 tasks. Recommended: Tasks 2, 1, 4 (assumes attendees already know the baseline).
+
+### Full-Day (8 hours) — Part 0 + Part I
+Morning: Lessons 0.1 → 0.3 (setup + architecture + lifecycle). Afternoon: Tasks 2 → 4 → 1.
 
 ### Multi-Session (3 × 2 hours)
-- Session 1: Tasks 2 + 4 (architecture foundations)
-- Session 2: Tasks 1 + 3 (communication patterns)
-- Session 3: Discussion + extension exercises
+- Session 1: Part 0 (baseline orientation)
+- Session 2: Tasks 2 + 4 (architecture foundations)
+- Session 3: Tasks 1 + 3 (communication patterns) + discussion
 
 ## Participant Workflow
 

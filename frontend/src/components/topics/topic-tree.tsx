@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { TASKS_BY_PART, PART_LABELS, type PartId } from '@/lib/topics-data';
 import { useTopicsStore } from '@/stores/topics-store';
 
-const PARTS: PartId[] = ['I', 'II', 'III'];
+const PARTS: PartId[] = ['0', 'I', 'II', 'III'];
 
 function ProgressBar({ value, max }: { value: number; max: number }) {
   const pct = max === 0 ? 0 : Math.round((value / max) * 100);
