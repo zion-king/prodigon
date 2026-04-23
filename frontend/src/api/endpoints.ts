@@ -25,9 +25,14 @@ async function generate(req: GenerateRequest): Promise<GenerateResponse> {
  * Streams tokens from the backend's SSE endpoint.
  *
  * The backend sends lines in this format:
- *   data: <token text>\n\n
- *   data: [DONE]\n\n
- *   data: [ERROR] some message\n\n
+ *   data: "<json-encoded token>"\n\n   — token payload, must be JSON.parse()d
+ *   data: [DONE]\n\n                    — sentinel, plain string
+ *   data: [ERROR] some message\n\n      — sentinel, plain string
+ *
+ * Tokens are JSON-encoded on the server so embedded `\n`, `\r`, and quotes
+ * inside a token don't collide with SSE's `\n`-based framing. Without this,
+ * any newline inside a streamed token would be consumed by the SSE parser
+ * as an event boundary and silently dropped — destroying markdown structure.
  *
  * We use `fetch` + ReadableStream (not EventSource) because the endpoint
  * requires a POST body.
@@ -79,15 +84,26 @@ async function* generateStream(
 
         const payload = trimmed.slice(6); // strip "data: "
 
+        // Sentinels are plain (un-encoded) strings — check before JSON.parse
         if (payload === '[DONE]') {
           return;
         }
-
         if (payload.startsWith('[ERROR]')) {
           throw new Error(payload.slice(8).trim());
         }
 
-        yield payload;
+        // Real tokens arrive as JSON-encoded string literals, e.g.
+        //   data: "### Heading\n\n"
+        // JSON.parse recovers the original string with newlines/quotes intact.
+        let token: string;
+        try {
+          token = JSON.parse(payload);
+        } catch {
+          // Defensive fallback: if an older backend emits a raw token,
+          // treat it as plain text rather than dropping the whole stream.
+          token = payload;
+        }
+        yield token;
       }
     }
   } finally {
